@@ -2,9 +2,11 @@
 
 
 LCD16x2 lcd;
-int buttons=0;
 
 
+int LCDBotones(){
+  return lcd.readButtons();
+}
 
 void LCDBorrar(){
   lcd.lcdClear(); 
@@ -25,11 +27,23 @@ void LCDSpeedGPS(int speed){
   lcd.lcdWrite(txtSpeed);
 }
 
-void LCDMetrosGPS(unsigned long tm){
-  char aux[10]="------ Km TOTAL";
-  sprintf(aux,"%06lu km TOTAL",tm);
+void LCDMetrosGPS(unsigned long tm,bool totales){
+  char aux[17]="------ km TOTAL ";
+  if (totales==false){
+    sprintf(aux,"%06lu km TRIP ",tm);
+  }
+  else{
+    sprintf(aux,"%06lu km TOTAL",tm);
+  }
+  
   lcd.lcdGoToXY(1,2);
   lcd.lcdWrite(aux);
+}
+
+void LCDIntroMenu(){
+  LCDBorrar();
+  lcd.lcdGoToXY(1,1);
+  lcd.lcdWrite(" ---- CONF ---- ");
 }
 /*
  * 

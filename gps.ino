@@ -41,6 +41,11 @@ unsigned long GPSLeeKmTotales()
   EEPROM.get(EEPROM_KM_TOTAL,km);
   return km;
 }
+unsigned long GPSLeeKmParciales(){
+   unsigned long km = 0xFFFFFFFF;
+  EEPROM.get(EEPROM_KM_TRIP,km);
+  return km;
+}
  
 
 

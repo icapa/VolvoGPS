@@ -1,6 +1,7 @@
-char consoleInput[64];
+char consoleInput[32];
 int indiceConsola=0;
 bool comandoConsola=false;
+
 
 void Consola(){
   while (Serial.available()){
@@ -21,9 +22,10 @@ void Consola(){
         consoleInput[0]='\0';
       }
     }
-
+    
     if (comandoConsola==true){
       comandoConsola=false;
+      
       if (strncmp(consoleInput,"KM=",3)==0){
         unsigned long kmT = 0xFFFFFFFF;
         sscanf(consoleInput+3,"%ld",&kmT);
@@ -45,7 +47,9 @@ void Consola(){
       }
       consoleInput[0]='\0';
     }
+    
   }
   
 }
+
 
