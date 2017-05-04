@@ -41,9 +41,19 @@ int buttons=0;
 // To remove compiling error
 void Consola()  __attribute__((__optimize__("O2")));
 
+// LED
+int ledPin1=13;
+int ledPin2=9;
 
+bool led1Status=false;
+
+bool gpsValid=false;
+int stepsNoGps=0;
 
 void setup() {
+  pinMode(ledPin1,OUTPUT);
+  pinMode(ledPin2,OUTPUT);
+  
   Wire.begin();
   Serial.begin(BAUDRATE);
   while(!Serial)
@@ -65,27 +75,49 @@ void loop() {
   // GPS or Console
   if (consoleMode==false){
     while(SERIAL.available()>0)
-      gps.encode(SERIAL.read());
+      gpsValid = gps.encode(SERIAL.read());
   }
   else
   {
     Consola();
   }
   
-  
   // GPS speed timer
   if (millis()>=timerMuestreoGPS){
     timeNow=millis();
-    timerMuestreoGPS = timeNow+1000;
-    
-    if (gps.speed.isValid()){
-      estadoGPS=true;
-      gpsSpeed=(int)gps.speed.kmph();         
-    }else{
-      estadoGPS=false;
+    timerMuestreoGPS = timeNow+2000;
+    /* LED STATUS */
+    if (led1Status==false){
+      led1Status=true;
+      digitalWrite(ledPin2,LOW);
+      
     }
+    else{
+      led1Status=false;
+      digitalWrite(ledPin2,HIGH);
+      
+    }
+
     
-    metros = GPSCalculaKm(1000, gpsSpeed);
+    
+    if (gpsValid==true && gps.time.isValid()){ 
+      gpsValid=false;
+      digitalWrite(ledPin1,HIGH);
+      estadoGPS=true;
+      gpsSpeed=(int)gps.speed.kmph();   
+      stepsNoGps=0;   
+    }else{
+      stepsNoGps++;
+      if (stepsNoGps==5){
+        stepsNoGps=0;
+        digitalWrite(ledPin1,LOW);
+        estadoGPS=false;
+      }
+      
+    }
+
+    
+    metros = GPSCalculaKm(2000, gpsSpeed);
     totalMetros = totalMetros + metros;
     tripMetros = tripMetros + metros;
     if (consoleMode==false){      
