@@ -1,4 +1,3 @@
-#include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <EEPROM.h>
@@ -7,10 +6,6 @@
 #define SERIAL Serial
 #define UMBRAL_SPEED_MAX 40
 #define UMBRAL_SPEED_MIN 5
-
-// GSP object
-TinyGPSPlus gps;
-
 
 
 bool estadoGPS=false;
@@ -37,6 +32,8 @@ bool eepromSave = false;
 // Console mode
 bool consoleMode = false;
 int buttons=0;
+int buttonsOld=0;
+int buttonsCount=0;
 
 // To remove compiling error
 void Consola()  __attribute__((__optimize__("O2")));
@@ -73,15 +70,17 @@ void setup() {
 void loop() {
 
   // GPS or Console
+  /*
   if (consoleMode==false){
     while(SERIAL.available()>0)
-      gpsValid = gps.encode(SERIAL.read());
+      gpsValid = true;
+      
   }
   else
   {
     Consola();
   }
-  
+  */
   // GPS speed timer
   if (millis()>=timerMuestreoGPS){
     timeNow=millis();
@@ -100,15 +99,14 @@ void loop() {
 
     
     
-    if (gpsValid==true && gps.time.isValid()){ 
+    if (gpsValid==true){ 
       gpsValid=false;
       digitalWrite(ledPin1,HIGH);
       estadoGPS=true;
-      gpsSpeed=(int)gps.speed.kmph();   
       stepsNoGps=0;   
     }else{
       stepsNoGps++;
-      if (stepsNoGps==5){
+      if (stepsNoGps==10){
         stepsNoGps=0;
         digitalWrite(ledPin1,LOW);
         estadoGPS=false;
@@ -152,40 +150,78 @@ void loop() {
   }
 
   //UI
+  
   buttons=LCDBotones();
-  if (buttons != 0x0F){
-    Serial.println(buttons);
-    if (consoleMode==false){
-      if (buttons==0x0E){
-        mostrarTotales = !mostrarTotales;
-        if (mostrarTotales==true)
-          LCDMetrosGPS((unsigned long)(totalMetros/1000),mostrarTotales);
-        else
-          LCDMetrosGPS((unsigned long)(tripMetros/1000),mostrarTotales);
-      }
-      else if (buttons==0x07){
-        if (mostrarTotales==false){
-          tripMetros=0;
-          LCDMetrosGPS((unsigned long)(tripMetros/1000),mostrarTotales);
-          GPSGuardaKmParciales(tripMetros);
+  if (buttons==buttonsOld){
+    buttonsCount++;
+    if (buttonsCount = 200000){
+      buttonsCount=0;  
+      
+      if (buttons != 0x0F){
+        if (consoleMode==false){
+          if (buttons==0x0E){
+            mostrarTotales = !mostrarTotales;
+            if (mostrarTotales==true)
+              LCDMetrosGPS((unsigned long)(totalMetros/1000),mostrarTotales);
+            else
+              LCDMetrosGPS((unsigned long)(tripMetros/1000),mostrarTotales);
+          }
+          else if (buttons==0x07){
+            if (mostrarTotales==false){
+              tripMetros=0;
+              LCDMetrosGPS((unsigned long)(tripMetros/1000),mostrarTotales);
+              GPSGuardaKmParciales(tripMetros);
+            }
+          }
+          else{
+            consoleMode=true;
+            //Serial.println("VolvoGPS Console");
+            LCDIntroMenu();
+          }
+        }
+        else{
+          // Gestionar los menus
+          if (buttons==0x07){
+            consoleMode=false;
+            LCDBorrar();
+            LCDEstadoGPS(estadoGPS);
+          }
         }
       }
-      else{
-        consoleMode=true;
-        Serial.println("VolvoGPS Console");
-        LCDIntroMenu();
-      }
+    }else{
+      buttonsCount=0;
     }
-    else{
-      // Gestionar los menus
-      if (buttons==0x07){
-        consoleMode=false;
-        LCDBorrar();
-        LCDEstadoGPS(estadoGPS);
-      }
-      delay(60);
-    }
+  }else{
+    buttonsOld=buttons;
   }
-  
-  
 }
+/* Serial port IRQ??? */
+void serialEvent(){
+  static int index=0;
+  char completeFrame[128];
+  int gpsVel;
+  char dato;
+  if (consoleMode==false){
+    while(SERIAL.available()){
+      dato = SERIAL.read();
+      completeFrame[index]=dato;
+      index++;
+      if (index>127) index=0;
+      if (dato=='\n'){
+        completeFrame[index]='\0';
+        index=0;
+        /* Test */
+        if (isGPRMCFrame(completeFrame)==true){
+          gpsVel = gpsGetSpeed(completeFrame);
+          if (gpsVel>=0){
+            gpsValid=true;
+            gpsSpeed=gpsVel;
+          }
+        }
+      }
+    }   
+  }else{
+    Consola();
+  }
+}
+
